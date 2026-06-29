@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set New Password | BNOSA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; outline: none; }
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            background-color: #151B2D;
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+
+        .card {
+            background-color: #1E2538;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+
+        .logo {
+            width: 140px;
+            margin-bottom: 30px;
+        }
+
+        h2 { margin: 0 0 10px 0; font-size: 24px; font-weight: 600; }
+        p { color: #B0B7C3; font-size: 14px; margin-bottom: 30px; }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: #B0B7C3;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .input-wrapper { position: relative; }
+
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 15px 45px 15px 15px;
+            background-color: #2A3450;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            color: #fff;
+            font-family: 'Poppins', sans-serif;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #4DBFA6;
+            background-color: #232c45;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #7A869A;
+        }
+        
+        .toggle-password:hover { color: #4DBFA6; }
+
+        .requirements {
+            text-align: left;
+            margin-bottom: 25px;
+            background: #252d42;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .req-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            color: #7A869A;
+            transition: color 0.3s;
+        }
+
+        .req-item:last-child { margin-bottom: 0; }
+        
+        .req-item svg { width: 14px; height: 14px; margin-right: 8px; fill: currentColor; }
+        
+        .req-item.valid { color: #4DBFA6; }
+        .req-item.invalid { color: #7A869A; }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            background-color: #4DBFA6;
+            background-image: linear-gradient(to right, #4DBFA6, #3da892);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(77, 191, 166, 0.4);
+        }
+
+        button:disabled {
+            background: #2A3450;
+            color: #586580;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="card">
+        <img src="https://firebasestorage.googleapis.com/v0/b/bnosa-staging.firebasestorage.app/o/BNOSA_logo.png?alt=media&token=ea8f6abd-9564-480e-9763-8fbddf06f645" alt="BNOSA Logo" class="logo">
+        
+        <h2>Set New Password</h2>
+        <p>Your new password must be different from previous used passwords.</p>
+
+        <form id="resetForm" onsubmit="return false;">
+            
+            <div class="input-group">
+                <label>New Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" placeholder="Enter new password">
+                    <span class="toggle-password" onclick="toggleVisibility('password', this)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Confirm Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="confirm_password" placeholder="Confirm new password">
+                    <span class="toggle-password" onclick="toggleVisibility('confirm_password', this)">
+                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    </span>
+                </div>
+            </div>
+
+            <div class="requirements">
+                <div class="req-item" id="req-len">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> At least 8 characters
+                </div>
+                <div class="req-item" id="req-num">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> Contains a number or symbol
+                </div>
+                <div class="req-item" id="req-match">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> Passwords match
+                </div>
+            </div>
+
+            <button id="submitBtn" disabled>Reset Password</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    const passwordInput = document.getElementById('password');
+    const confirmInput = document.getElementById('confirm_password');
+    const submitBtn = document.getElementById('submitBtn');
+
+    const reqLen = document.getElementById('req-len');
+    const reqNum = document.getElementById('req-num');
+    const reqMatch = document.getElementById('req-match');
+
+    // Toggle Eye Icon
+    function toggleVisibility(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") {
+            input.type = "text";
+            icon.style.color = "#4DBFA6";
+        } else {
+            input.type = "password";
+            icon.style.color = "#7A869A";
+        }
+    }
+
+    function validate() {
+        const val = passwordInput.value;
+        const confirmVal = confirmInput.value;
+        let validCount = 0;
+
+        // 1. Length Check
+        if (val.length >= 8) {
+            reqLen.classList.add('valid');
+            reqLen.innerHTML = '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> At least 8 characters';
+            validCount++;
+        } else {
+            reqLen.classList.remove('valid');
+            reqLen.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> At least 8 characters';
+        }
+
+        // 2. Number/Symbol Check
+        if (/[0-9!@#$%^&*]/.test(val)) {
+            reqNum.classList.add('valid');
+            reqNum.innerHTML = '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Contains a number or symbol';
+            validCount++;
+        } else {
+            reqNum.classList.remove('valid');
+            reqNum.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> Contains a number or symbol';
+        }
+
+        // 3. Match Check
+        if (val.length > 0 && val === confirmVal) {
+            reqMatch.classList.add('valid');
+            reqMatch.innerHTML = '<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Passwords match';
+            validCount++;
+        } else {
+            reqMatch.classList.remove('valid');
+            reqMatch.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle></svg> Passwords match';
+        }
+
+        // Enable Button if all valid
+        if (validCount === 3) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    }
+
+    passwordInput.addEventListener('input', validate);
+    confirmInput.addEventListener('input', validate);
+</script>
+
+</body>
+</html>
