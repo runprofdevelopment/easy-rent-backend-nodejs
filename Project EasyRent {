@@ -1,0 +1,1624 @@
+Project EasyRent {
+  database_type: "PostgreSQL"
+  Note: "Unified schema — Phases 1–5 (Core Foundation, Operations, Fleet/RTO, Booking/Finance, Admin/Reporting)"
+}
+
+// ─── Phase 1: Core Foundation ───────────────────────────────────────────────
+
+Enum AgencyStatus {
+  pending
+  approved
+  active
+  suspended
+  rejected
+}
+
+Enum UserStatus {
+  invited
+  active
+  inactive
+  locked
+  suspended
+}
+
+Table agencies {
+
+  id uuid [pk]
+  code varchar [unique]
+  legal_name varchar
+  display_name varchar
+  tax_id varchar
+  status AgencyStatus
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table agency_applications {
+
+  id uuid [pk]
+  agency_name varchar
+  applicant_name varchar
+  applicant_email varchar
+  applicant_phone varchar
+  tax_id varchar
+  business_license_url varchar
+  location_url varchar
+  status varchar
+  submitted_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table agency_verifications {
+
+  id uuid [pk]
+  application_id uuid
+  verification_type varchar
+  verified boolean
+  verified_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table users {
+
+  id uuid [pk]
+  agency_id uuid
+  branch_id uuid [note: "Phase 5 — optional branch assignment"]
+  email varchar [unique]
+  phone varchar
+  first_name varchar
+  last_name varchar
+  password_hash varchar [note: "Phase 5"]
+  status UserStatus
+  is_first_login boolean [default: true, note: "true حتى يسجل أول دخول فعلي، بعدها يتحول false"]
+  last_login_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table roles {
+
+  id uuid [pk]
+  name varchar [unique]
+  description text
+  status varchar [note: "Phase 5"]
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table permissions {
+
+  id uuid [pk]
+  code varchar [unique]
+  name varchar [note: "Phase 5"]
+  module varchar
+  description text
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table role_permissions {
+
+  role_id uuid
+  permission_id uuid
+
+  indexes {
+    (role_id, permission_id) [pk]
+  }
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table user_roles {
+
+  user_id uuid
+  role_id uuid
+
+  indexes {
+    (user_id, role_id) [pk]
+  }
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table otp_verifications {
+
+  id uuid [pk]
+  user_id uuid
+  channel varchar
+  code_hash varchar
+  expires_at timestamp
+  verified_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table notifications {
+
+  id uuid [pk]
+  user_id uuid
+  title varchar
+  body text [note: "Phase 1 — message in Phase 5"]
+  notification_type varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table notification_reads {
+
+  id uuid [pk]
+  notification_id uuid
+  user_id uuid
+  read_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table notification_templates {
+
+  id uuid [pk]
+  template_name varchar
+  event_code varchar
+  title_template text
+  body_template text
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table audit_logs {
+
+  id uuid [pk]
+  agency_id uuid
+  user_id uuid
+  entity_type varchar
+  entity_id uuid
+  action varchar
+  old_values json
+  new_values json
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+// ─── Phase 2: Operations ──────────────────────────────────────────────────────
+
+Enum BranchType {
+  physical
+  virtual
+}
+
+Enum BranchStatus {
+  active
+  inactive
+}
+
+Enum DriverStatus {
+  pending
+  approved
+  rejected
+  inactive
+}
+
+Enum durationTier {
+  30Minutes
+45Minutes
+1Hour
+1_5Hours
+2Hours
+2_5Hours
+3Hours
+
+}
+
+Table branches {
+
+  id uuid [pk]
+  agency_id uuid
+  name varchar
+  email varchar
+  phone varchar
+  city varchar
+  area varchar
+  branch_type BranchType
+  maps_url varchar
+  status BranchStatus
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table branch_operating_hours {
+
+  id uuid [pk]
+  branch_id uuid
+  day_of_week int
+  open_time time
+  close_time time
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table service_zones {
+
+  id uuid [pk]
+  branch_id uuid
+  name varchar
+  polygon json
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table delivery_fee_tiers {
+
+  id uuid [pk]
+  branch_id uuid
+  service_zone_id uuid
+  duration_tier durationTier
+  fee decimal
+  currency varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table airports {
+
+  id uuid [pk]
+  city varchar
+  code varchar
+  name varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table branch_airports {
+
+  branch_id uuid
+  airport_id uuid
+
+  indexes {
+    (branch_id, airport_id) [pk]
+  }
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table drivers {
+
+  id uuid [pk]
+  agency_id uuid
+  branch_id uuid
+  name varchar
+  email varchar
+  phone varchar
+  license_number varchar
+  status DriverStatus
+  reviewed_by uuid
+  reviewed_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table driver_availability {
+
+  id uuid [pk]
+  driver_id uuid
+  day_of_week int
+  start_time time
+  end_time time
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table vehicle_categories {
+
+  id uuid [pk]
+  name varchar
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table vehicle_brands {
+
+  id uuid [pk]
+  name varchar
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table vehicle_models {
+
+  id uuid [pk]
+  category_id uuid
+  brand_id uuid
+  model_name varchar
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+// ─── Phase 3: Fleet & RTO ─────────────────────────────────────────────────────
+
+Enum InventoryStatus {
+  draft
+  active
+  inactive
+  published
+}
+
+Enum VehicleCondition {
+  new
+  used
+}
+
+Enum RTOAgreementStatus {
+  active
+  completed
+  cancelled
+  pending_settlement
+}
+
+Table fleet_inventory {
+
+  id uuid [pk]
+  branch_id uuid
+  category_id uuid
+  brand_id uuid
+  model_id uuid
+  vehicle_year int
+  quantity int
+  status InventoryStatus
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table rental_pricing {
+
+  id uuid [pk]
+  inventory_id uuid
+  daily_price decimal
+  weekly_price decimal
+  monthly_price decimal
+  annual_price decimal
+  currency varchar
+  effective_date date
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table inventory_images {
+
+  id uuid [pk]
+  inventory_id uuid
+  image_url varchar
+  is_primary boolean
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table rto_vehicles {
+
+  id uuid [pk]
+  branch_id uuid
+  category_id uuid
+  brand_id uuid
+  model_id uuid
+  vehicle_year int
+  vin_number varchar [unique]
+  plate_number varchar [unique]
+  color varchar
+  vehicle_condition VehicleCondition
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table rto_pricing {
+
+  id uuid [pk]
+  vehicle_id uuid
+  total_ownership_price decimal
+  effective_date date
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table rto_packages {
+
+  id uuid [pk]
+  pricing_id uuid
+  duration_months int
+  monthly_installment decimal
+  cashback_percentage decimal
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table vehicle_transfers {
+
+  id uuid [pk]
+  vehicle_id uuid
+  from_branch_id uuid
+  to_branch_id uuid
+  transfer_date timestamp
+  notes text
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table customers {
+
+  id uuid [pk]
+  full_name varchar
+  email varchar
+  phone varchar
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table customer_wallets {
+
+  id uuid [pk]
+  customer_id uuid [unique]
+  balance decimal
+  cashback_balance decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table easyrent_wallet {
+
+
+  id uuid [pk]
+
+  available_balance decimal
+
+  pending_balance decimal
+
+  reserved_balance decimal
+
+  currency varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table easyrent_wallet_transactions {
+
+
+  id uuid [pk]
+  wallet_id uuid
+  transaction_type varchar
+  reference_type varchar
+  reference_id uuid
+  amount decimal
+  balance_before decimal
+  balance_after decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table wallet_transactions {
+
+  id uuid [pk]
+  wallet_id uuid
+  reference_type varchar
+  reference_id uuid
+  transaction_type varchar
+  amount decimal
+  balance_before decimal
+  balance_after decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table rto_agreements {
+
+  id uuid [pk]
+  customer_id uuid
+  vehicle_id uuid
+  package_id uuid
+  contract_number varchar
+  start_date date
+  end_date date
+  paid_amount decimal
+  remaining_balance decimal
+  cashback_earned decimal
+  status RTOAgreementStatus
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table rto_installments {
+
+  id uuid [pk]
+  agreement_id uuid
+  installment_no int
+  due_date date
+  amount decimal
+  cashback_amount decimal
+  payment_status varchar
+  paid_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+// ─── Phase 4: Booking & Finance ───────────────────────────────────────────────
+
+Enum BookingType {
+  rental
+  rent_to_own
+}
+
+Enum BookingStatus {
+  booked
+  confirmed
+  in_progress
+  cancelled
+  closed
+  earlyReturn
+  lateReturn
+}
+
+Enum PaymentStatus {
+  pending
+  paid
+  failed
+  refunded
+}
+
+Enum SettlementStatus {
+  pending
+  processing
+  paid
+  failed
+}
+
+Table bookings {
+
+  id uuid [pk]
+  booking_reference varchar [unique]
+  customer_id uuid
+  agency_id uuid
+  branch_id uuid
+  booking_type BookingType
+  status BookingStatus
+  start_date timestamp
+  end_date timestamp
+  total_amount decimal
+  vat_amount decimal
+  policiesAndPricing json
+  canceled_by canceledEnum
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+enum canceledEnum {
+  customer
+  agency
+  system
+}
+
+Table booking_vehicles {
+
+  id uuid [pk]
+  booking_id uuid
+  inventory_id uuid
+  rto_vehicle_id uuid
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table driver_assignments {
+
+  id uuid [pk]
+  booking_id uuid
+  driver_id uuid
+  assigned_at timestamp
+  assignment_status driverAssignment
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+enum driverAssignment {
+  pending
+  done
+  reassigne
+}
+
+Table inspections {
+
+  id uuid [pk]
+  booking_id uuid
+  inspection_type varchar
+  inspector_id uuid
+  odometer_reading decimal
+  fuel_level varchar
+  vehicle_condition text
+  damage_notes text
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table inspection_images {
+
+  id uuid [pk]
+  inspection_id uuid
+  image_url varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table damage_reports {
+
+  id uuid [pk]
+  booking_id uuid
+  inspection_id uuid
+  estimated_cost decimal
+  description text
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table booking_extensions {
+
+  id uuid [pk]
+  booking_id uuid
+  old_end_date timestamp
+  new_end_date timestamp
+  additional_amount decimal
+  payment_status PaymentStatus
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table cancellations {
+
+  id uuid [pk]
+  booking_id uuid
+  cancellation_reason text
+  refund_amount decimal
+  cancellation_fee decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table payments {
+
+  id uuid [pk]
+  booking_id uuid
+  customer_id uuid
+  amount decimal
+  vat_amount decimal
+  payment_gateway varchar
+  gateway_reference varchar
+  status PaymentStatus
+  paid_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table financial_settings {
+
+  id bigint [pk]
+
+  vat_percentage decimal(5,2)
+  commission_value decimal(10,2)
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+
+Table financial_transactions {
+
+  id uuid [pk]
+  booking_id uuid
+  customer_id uuid
+  agency_id uuid
+  transaction_type varchar
+  gross_amount decimal
+  vat_amount decimal
+  commission_amount decimal
+  net_amount decimal
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table agency_wallets {
+
+  id uuid [pk]
+  agency_id uuid [unique]
+  available_balance decimal
+  pending_balance decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table agency_wallet_transactions {
+
+  id uuid [pk]
+  wallet_id uuid
+  transaction_type varchar
+  reference_type varchar
+  reference_id uuid
+  amount decimal
+  balance_after decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table settlements {
+
+  id uuid [pk]
+  agency_id uuid
+  settlement_period_start date
+  settlement_period_end date
+  gross_revenue decimal
+  total_vat decimal
+  total_commission decimal
+  net_payout decimal
+  status SettlementStatus
+  paid_at timestamp
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table settlement_items {
+
+  id uuid [pk]
+  settlement_id uuid
+  booking_id uuid
+  transaction_id uuid
+  gross_amount decimal
+  commission_amount decimal
+  net_amount decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table invoices {
+
+  id uuid [pk]
+  settlement_id uuid
+  invoice_number varchar
+  invoice_date date
+  pdf_url varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+// ─── Phase 5: Admin & Reporting ─────────────────────────────────────────────────
+
+Table promotions {
+
+  id uuid [pk]
+  agency_id uuid
+  name varchar
+  description text
+  discount_type varchar
+  discount_value decimal
+  max_discount_amount decimal
+  start_date date
+  end_date date
+  usage_limit int
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table promotion_branches {
+
+  promotion_id uuid
+  branch_id uuid
+
+  indexes {
+    (promotion_id, branch_id) [pk]
+  }
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table promotion_categories {
+
+  promotion_id uuid
+  category_id uuid
+
+  indexes {
+    (promotion_id, category_id) [pk]
+  }
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table promo_codes {
+
+  id uuid [pk]
+  agency_id uuid
+  code varchar [unique]
+  description text
+  discount_type varchar
+  discount_value decimal
+  max_discount_amount decimal
+  start_date date
+  end_date date
+  usage_limit int
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table insurance_plans {
+
+  id uuid [pk]
+  name varchar
+  description text
+  terms_conditions text
+  policy_pdf_url varchar
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table insurance_coverages {
+
+  id uuid [pk]
+  insurance_plan_id uuid
+  agency_id uuid
+  coverage_type coverageType
+  coverage_cost decimal
+  max_coverage_amount decimal
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+enum coverageType {
+  CollisionCoverage
+  ComprehensiveCoverage
+  ThirdPartyCoverage
+  RoadsideAssistance
+  PersonalBelongingsCoverage
+}
+
+Table rental_policies {
+
+  id uuid [pk]
+  policy_name varchar
+  description text
+  business_rules text
+  status varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table mileage_policies {
+
+  id uuid [pk]
+  inventory_id uuid
+  included_km int
+  extra_km_charge decimal
+  unlimited_enabled boolean
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table cancellation_policies {
+
+  id uuid [pk]
+  agency_id uuid
+  cancellation_fee_percentage decimal
+  free_cancellation_hours int
+  partial_refund_hours int
+  no_refund_hours int
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table international_derivers {
+
+  id uuid [pk]
+  agency_id uuid
+  status boolean
+  AdditionalFee decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+
+
+
+Table child_seat_policies {
+
+  id uuid [pk]
+  agency_id uuid
+  enabled boolean
+  seat_cost decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table additional_driver_policies {
+
+  id uuid [pk]
+  agency_id uuid
+  enabled boolean
+  additional_driver_fee decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table smoking_policies {
+
+  id uuid [pk]
+  agency_id uuid
+  smoking_allowed boolean
+  violation_fee decimal
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+Table reports {
+
+  id uuid [pk]
+  report_name varchar
+  report_type varchar
+  generated_by uuid
+  generated_at timestamp
+  export_url varchar
+
+  created_at timestamp
+  created_by uuid
+  deleted_at timestamp
+  deleted_by uuid
+  updated_at timestamp
+  updated_by uuid
+}
+
+// ─── References ───────────────────────────────────────────────────────────────
+
+// Phase 1
+Ref: agency_verifications.application_id > agency_applications.id
+Ref: users.agency_id > agencies.id
+Ref: international_derivers.agency_id > agencies.id
+Ref: users.branch_id > branches.id
+Ref: role_permissions.role_id > roles.id
+Ref: role_permissions.permission_id > permissions.id
+Ref: user_roles.user_id > users.id
+Ref: user_roles.role_id > roles.id
+Ref: otp_verifications.user_id > users.id
+Ref: notifications.user_id > users.id
+Ref: notification_reads.notification_id > notifications.id
+Ref: notification_reads.user_id > users.id
+Ref: audit_logs.user_id > users.id
+Ref: audit_logs.agency_id > agencies.id
+
+// Phase 2
+Ref: branches.agency_id > agencies.id
+Ref: branch_operating_hours.branch_id > branches.id
+Ref: service_zones.branch_id > branches.id
+Ref: delivery_fee_tiers.branch_id > branches.id
+Ref: delivery_fee_tiers.service_zone_id > service_zones.id
+Ref: branch_airports.branch_id > branches.id
+Ref: branch_airports.airport_id > airports.id
+Ref: drivers.agency_id > agencies.id
+Ref: drivers.branch_id > branches.id
+Ref: drivers.reviewed_by > users.id
+Ref: driver_availability.driver_id > drivers.id
+Ref: vehicle_models.category_id > vehicle_categories.id
+Ref: vehicle_models.brand_id > vehicle_brands.id
+
+// Phase 3
+Ref: fleet_inventory.branch_id > branches.id
+Ref: fleet_inventory.category_id > vehicle_categories.id
+Ref: fleet_inventory.brand_id > vehicle_brands.id
+Ref: fleet_inventory.model_id > vehicle_models.id
+Ref: rental_pricing.inventory_id > fleet_inventory.id
+Ref: inventory_images.inventory_id > fleet_inventory.id
+Ref: rto_vehicles.branch_id > branches.id
+Ref: rto_vehicles.category_id > vehicle_categories.id
+Ref: rto_vehicles.brand_id > vehicle_brands.id
+Ref: rto_vehicles.model_id > vehicle_models.id
+Ref: rto_pricing.vehicle_id > rto_vehicles.id
+Ref: rto_packages.pricing_id > rto_pricing.id
+Ref: vehicle_transfers.vehicle_id > rto_vehicles.id
+Ref: vehicle_transfers.from_branch_id > branches.id
+Ref: vehicle_transfers.to_branch_id > branches.id
+Ref: customer_wallets.customer_id > customers.id
+Ref: wallet_transactions.wallet_id > customer_wallets.id
+Ref: rto_agreements.customer_id > customers.id
+Ref: rto_agreements.vehicle_id > rto_vehicles.id
+Ref: rto_agreements.package_id > rto_packages.id
+Ref: rto_installments.agreement_id > rto_agreements.id
+
+// Phase 4
+Ref: bookings.customer_id > customers.id
+Ref: bookings.agency_id > agencies.id
+Ref: bookings.branch_id > branches.id
+Ref: booking_vehicles.booking_id > bookings.id
+Ref: booking_vehicles.inventory_id > fleet_inventory.id
+Ref: booking_vehicles.rto_vehicle_id > rto_vehicles.id
+Ref: driver_assignments.booking_id > bookings.id
+Ref: driver_assignments.driver_id > drivers.id
+Ref: inspections.booking_id > bookings.id
+Ref: inspections.inspector_id > users.id
+Ref: inspection_images.inspection_id > inspections.id
+Ref: damage_reports.booking_id > bookings.id
+Ref: damage_reports.inspection_id > inspections.id
+Ref: booking_extensions.booking_id > bookings.id
+Ref: cancellations.booking_id > bookings.id
+Ref: payments.booking_id > bookings.id
+Ref: payments.customer_id > customers.id
+Ref: financial_transactions.booking_id > bookings.id
+Ref: financial_transactions.customer_id > customers.id
+Ref: financial_transactions.agency_id > agencies.id
+Ref: agency_wallets.agency_id > agencies.id
+Ref: agency_wallet_transactions.wallet_id > agency_wallets.id
+Ref: settlements.agency_id > agencies.id
+Ref: settlement_items.settlement_id > settlements.id
+Ref: settlement_items.booking_id > bookings.id
+Ref: settlement_items.transaction_id > financial_transactions.id
+Ref: invoices.settlement_id > settlements.id
+
+// Phase 5
+Ref: promotions.agency_id > agencies.id
+Ref: promotion_branches.promotion_id > promotions.id
+Ref: promotion_branches.branch_id > branches.id
+Ref: promotion_categories.promotion_id > promotions.id
+Ref: promotion_categories.category_id > vehicle_categories.id
+Ref: promo_codes.agency_id > agencies.id
+Ref: insurance_coverages.insurance_plan_id > insurance_plans.id
+Ref: insurance_coverages.agency_id > agencies.id
+Ref: mileage_policies.inventory_id > fleet_inventory.id
+Ref: cancellation_policies.agency_id > agencies.id
+Ref: child_seat_policies.agency_id > agencies.id
+Ref: additional_driver_policies.agency_id > agencies.id
+Ref: smoking_policies.agency_id > agencies.id
+Ref: reports.generated_by > users.id
+Ref: easyrent_wallet_transactions.wallet_id > easyrent_wallet.id
+
+// Audit trail — user references
+Ref: agencies.created_by > users.id
+Ref: agencies.deleted_by > users.id
+Ref: agencies.updated_by > users.id
+Ref: agency_applications.created_by > users.id
+Ref: agency_applications.deleted_by > users.id
+Ref: agency_applications.updated_by > users.id
+Ref: agency_verifications.created_by > users.id
+Ref: agency_verifications.deleted_by > users.id
+Ref: agency_verifications.updated_by > users.id
+Ref: users.created_by > users.id
+Ref: users.deleted_by > users.id
+Ref: users.updated_by > users.id
+Ref: roles.created_by > users.id
+Ref: roles.deleted_by > users.id
+Ref: roles.updated_by > users.id
+Ref: permissions.created_by > users.id
+Ref: permissions.deleted_by > users.id
+Ref: permissions.updated_by > users.id
+Ref: role_permissions.created_by > users.id
+Ref: role_permissions.deleted_by > users.id
+Ref: role_permissions.updated_by > users.id
+Ref: user_roles.created_by > users.id
+Ref: user_roles.deleted_by > users.id
+Ref: user_roles.updated_by > users.id
+Ref: otp_verifications.created_by > users.id
+Ref: otp_verifications.deleted_by > users.id
+Ref: otp_verifications.updated_by > users.id
+Ref: notifications.created_by > users.id
+Ref: notifications.deleted_by > users.id
+Ref: notifications.updated_by > users.id
+Ref: notification_reads.created_by > users.id
+Ref: notification_reads.deleted_by > users.id
+Ref: notification_reads.updated_by > users.id
+Ref: notification_templates.created_by > users.id
+Ref: notification_templates.deleted_by > users.id
+Ref: notification_templates.updated_by > users.id
+Ref: audit_logs.created_by > users.id
+Ref: audit_logs.deleted_by > users.id
+Ref: audit_logs.updated_by > users.id
+Ref: branches.created_by > users.id
+Ref: branches.deleted_by > users.id
+Ref: branches.updated_by > users.id
+Ref: branch_operating_hours.created_by > users.id
+Ref: branch_operating_hours.deleted_by > users.id
+Ref: branch_operating_hours.updated_by > users.id
+Ref: service_zones.created_by > users.id
+Ref: service_zones.deleted_by > users.id
+Ref: service_zones.updated_by > users.id
+Ref: delivery_fee_tiers.created_by > users.id
+Ref: delivery_fee_tiers.deleted_by > users.id
+Ref: delivery_fee_tiers.updated_by > users.id
+Ref: airports.created_by > users.id
+Ref: airports.deleted_by > users.id
+Ref: airports.updated_by > users.id
+Ref: branch_airports.created_by > users.id
+Ref: branch_airports.deleted_by > users.id
+Ref: branch_airports.updated_by > users.id
+Ref: drivers.created_by > users.id
+Ref: drivers.deleted_by > users.id
+Ref: drivers.updated_by > users.id
+Ref: driver_availability.created_by > users.id
+Ref: driver_availability.deleted_by > users.id
+Ref: driver_availability.updated_by > users.id
+Ref: vehicle_categories.created_by > users.id
+Ref: vehicle_categories.deleted_by > users.id
+Ref: vehicle_categories.updated_by > users.id
+Ref: vehicle_brands.created_by > users.id
+Ref: vehicle_brands.deleted_by > users.id
+Ref: vehicle_brands.updated_by > users.id
+Ref: vehicle_models.created_by > users.id
+Ref: vehicle_models.deleted_by > users.id
+Ref: vehicle_models.updated_by > users.id
+Ref: fleet_inventory.created_by > users.id
+Ref: fleet_inventory.deleted_by > users.id
+Ref: fleet_inventory.updated_by > users.id
+Ref: rental_pricing.created_by > users.id
+Ref: rental_pricing.deleted_by > users.id
+Ref: rental_pricing.updated_by > users.id
+Ref: inventory_images.created_by > users.id
+Ref: inventory_images.deleted_by > users.id
+Ref: inventory_images.updated_by > users.id
+Ref: rto_vehicles.created_by > users.id
+Ref: rto_vehicles.deleted_by > users.id
+Ref: rto_vehicles.updated_by > users.id
+Ref: rto_pricing.created_by > users.id
+Ref: rto_pricing.deleted_by > users.id
+Ref: rto_pricing.updated_by > users.id
+Ref: rto_packages.created_by > users.id
+Ref: rto_packages.deleted_by > users.id
+Ref: rto_packages.updated_by > users.id
+Ref: vehicle_transfers.created_by > users.id
+Ref: vehicle_transfers.deleted_by > users.id
+Ref: vehicle_transfers.updated_by > users.id
+Ref: customers.created_by > users.id
+Ref: customers.deleted_by > users.id
+Ref: customers.updated_by > users.id
+Ref: customer_wallets.created_by > users.id
+Ref: customer_wallets.deleted_by > users.id
+Ref: customer_wallets.updated_by > users.id
+Ref: easyrent_wallet.created_by > users.id
+Ref: easyrent_wallet.deleted_by > users.id
+Ref: easyrent_wallet.updated_by > users.id
+Ref: easyrent_wallet_transactions.created_by > users.id
+Ref: easyrent_wallet_transactions.deleted_by > users.id
+Ref: easyrent_wallet_transactions.updated_by > users.id
+Ref: wallet_transactions.created_by > users.id
+Ref: wallet_transactions.deleted_by > users.id
+Ref: wallet_transactions.updated_by > users.id
+Ref: rto_agreements.created_by > users.id
+Ref: rto_agreements.deleted_by > users.id
+Ref: rto_agreements.updated_by > users.id
+Ref: rto_installments.created_by > users.id
+Ref: rto_installments.deleted_by > users.id
+Ref: rto_installments.updated_by > users.id
+Ref: bookings.created_by > users.id
+Ref: bookings.deleted_by > users.id
+Ref: bookings.updated_by > users.id
+Ref: booking_vehicles.created_by > users.id
+Ref: booking_vehicles.deleted_by > users.id
+Ref: booking_vehicles.updated_by > users.id
+Ref: driver_assignments.created_by > users.id
+Ref: driver_assignments.deleted_by > users.id
+Ref: driver_assignments.updated_by > users.id
+Ref: inspections.created_by > users.id
+Ref: inspections.deleted_by > users.id
+Ref: inspections.updated_by > users.id
+Ref: inspection_images.created_by > users.id
+Ref: inspection_images.deleted_by > users.id
+Ref: inspection_images.updated_by > users.id
+Ref: damage_reports.created_by > users.id
+Ref: damage_reports.deleted_by > users.id
+Ref: damage_reports.updated_by > users.id
+Ref: booking_extensions.created_by > users.id
+Ref: booking_extensions.deleted_by > users.id
+Ref: booking_extensions.updated_by > users.id
+Ref: cancellations.created_by > users.id
+Ref: cancellations.deleted_by > users.id
+Ref: cancellations.updated_by > users.id
+Ref: payments.created_by > users.id
+Ref: payments.deleted_by > users.id
+Ref: payments.updated_by > users.id
+Ref: financial_settings.created_by > users.id
+Ref: financial_settings.deleted_by > users.id
+Ref: financial_settings.updated_by > users.id
+Ref: financial_transactions.created_by > users.id
+Ref: financial_transactions.deleted_by > users.id
+Ref: financial_transactions.updated_by > users.id
+Ref: agency_wallets.created_by > users.id
+Ref: agency_wallets.deleted_by > users.id
+Ref: agency_wallets.updated_by > users.id
+Ref: agency_wallet_transactions.created_by > users.id
+Ref: agency_wallet_transactions.deleted_by > users.id
+Ref: agency_wallet_transactions.updated_by > users.id
+Ref: settlements.created_by > users.id
+Ref: settlements.deleted_by > users.id
+Ref: settlements.updated_by > users.id
+Ref: settlement_items.created_by > users.id
+Ref: settlement_items.deleted_by > users.id
+Ref: settlement_items.updated_by > users.id
+Ref: invoices.created_by > users.id
+Ref: invoices.deleted_by > users.id
+Ref: invoices.updated_by > users.id
+Ref: promotions.created_by > users.id
+Ref: promotions.deleted_by > users.id
+Ref: promotions.updated_by > users.id
+Ref: promotion_branches.created_by > users.id
+Ref: promotion_branches.deleted_by > users.id
+Ref: promotion_branches.updated_by > users.id
+Ref: promotion_categories.created_by > users.id
+Ref: promotion_categories.deleted_by > users.id
+Ref: promotion_categories.updated_by > users.id
+Ref: promo_codes.created_by > users.id
+Ref: promo_codes.deleted_by > users.id
+Ref: promo_codes.updated_by > users.id
+Ref: insurance_plans.created_by > users.id
+Ref: insurance_plans.deleted_by > users.id
+Ref: insurance_plans.updated_by > users.id
+Ref: insurance_coverages.created_by > users.id
+Ref: insurance_coverages.deleted_by > users.id
+Ref: insurance_coverages.updated_by > users.id
+Ref: rental_policies.created_by > users.id
+Ref: rental_policies.deleted_by > users.id
+Ref: rental_policies.updated_by > users.id
+Ref: mileage_policies.created_by > users.id
+Ref: mileage_policies.deleted_by > users.id
+Ref: mileage_policies.updated_by > users.id
+Ref: cancellation_policies.created_by > users.id
+Ref: cancellation_policies.deleted_by > users.id
+Ref: cancellation_policies.updated_by > users.id
+Ref: international_derivers.created_by > users.id
+Ref: international_derivers.deleted_by > users.id
+Ref: international_derivers.updated_by > users.id
+Ref: child_seat_policies.created_by > users.id
+Ref: child_seat_policies.deleted_by > users.id
+Ref: child_seat_policies.updated_by > users.id
+Ref: additional_driver_policies.created_by > users.id
+Ref: additional_driver_policies.deleted_by > users.id
+Ref: additional_driver_policies.updated_by > users.id
+Ref: smoking_policies.created_by > users.id
+Ref: smoking_policies.deleted_by > users.id
+Ref: smoking_policies.updated_by > users.id
+Ref: reports.created_by > users.id
+Ref: reports.deleted_by > users.id
+Ref: reports.updated_by > users.id
