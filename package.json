@@ -7,7 +7,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "deploy:cloudrun": "bash ./deploy-cloud-run.sh",
+    "deploy:cloudrun:staging": "bash ./deploy-cloud-run.sh staging",
+    "deploy:cloudrun:production": "bash ./deploy-cloud-run.sh production",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
